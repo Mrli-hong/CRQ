@@ -1,0 +1,50 @@
+{
+  "name": "crm-hddml-components",
+  "version": "1.0.0-beta.23",
+  "main": "lib/index.js",
+  "module": "lib/index.js",
+  "files": [
+    "lib",
+    "doc"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:dev": "npm run build && npm run build:meta",
+    "build:meta": "node ./scripts/build.lowcode.js",
+    "build:publish": "npm run build && npm run build:meta && npm run build:zip",
+    "build:zip": "node ./scripts/zip.dir.js",
+    "dev:lowcode": "node ./scripts/dev.lowcode.js"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue2": "^2.2.0",
+    "@vue/test-utils": "1",
+    "archiver": "^6.0.0",
+    "axios": "^1.7.3",
+    "chokidar": "^3.6.0",
+    "http-server": "^14.1.1",
+    "sass": "^1.77.8",
+    "typescript": "^4.9.3",
+    "vite": "^4.1.0",
+    "vite-plugin-build": "^0.10.0"
+  },
+  "peerdependencies": {
+    "vitest": "^0.34.6",
+    "vue": "^2.6.14",
+    "h_ui": "^1.65.0"
+  },
+  "dependencies": {
+    "dayjs": "1.11.11",
+    "h_ui": "^1.65.0",
+    "hddml-components": "2.9.1-beta.5",
+    "vite-plugin-require-transform": "^1.0.21",
+    "vue": "^2.7.15"
+  },
+  "deps": [
+    {
+      "name": "h_ui",
+      "version": "1.65.0"
+    }
+  ],
+  "title": "CRM低码组件"
+}

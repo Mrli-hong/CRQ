@@ -1,0 +1,5 @@
+node_modules
+lib
+*.zip
+package-lock.json
+.vscode

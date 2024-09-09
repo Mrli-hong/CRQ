@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
+    "moduleResolution": "Node",
+    "strict": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+   "src"  
+  ],
+  "vueCompilerOptions": {
+    "experimentalCompatMode": 2
+  },
+}
