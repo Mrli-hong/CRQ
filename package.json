@@ -34,7 +34,7 @@
     "h_ui": "^1.65.0"
   },
   "dependencies": {
-    "dayjs": "1.11.11",
+    "dayjs": "^1.11.11",
     "h_ui": "^1.65.0",
     "hddml-components": "2.9.1-beta.5",
     "vite-plugin-require-transform": "^1.0.21",
