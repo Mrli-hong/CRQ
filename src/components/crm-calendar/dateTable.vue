@@ -263,3 +263,83 @@ export default {
     },
 };
 </script>
+
+<style lang="scss" scoped>
+.crm-calendar-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.crm-calendar-table thead th {
+    padding: 4px 0;
+    color: #606266;
+    font-weight: normal;
+    border: none;
+}
+
+.crm-calendar-table:not(.is-range) td.prev,
+.crm-calendar-table:not(.is-range) td.next {
+    color: #999999;
+}
+
+.crm-calendar-table td {
+    border-bottom: 1px solid #ebeef5;
+    border-right: 1px solid #ebeef5;
+    vertical-align: top;
+}
+
+.crm-calendar-table tr:first-child td {
+    border-top: 1px solid #ecf5ff;
+}
+
+.crm-calendar-table tr td:first-child {
+    border-left: 1px solid #ecf5ff;
+}
+
+.crm-calendar-table .crm-calendar-day {
+    box-sizing: border-box;
+    padding: 8px;
+    height: 100px;
+}
+
+.crm-calendar-table .crm-calendar-day:hover {
+    background-color: #ecf5ff;
+}
+
+.crm-calendar-table .date-cell {
+    display: flex;
+    justify-content: space-between;
+}
+
+.crm-calendar-table .date-cell-lunar {
+    color: #999999;
+}
+
+.crm-calendar-table .crm-calendar-day-is-selected {
+    background-color: #fff;
+}
+
+.crm-calendar-table .crm-calendar-day-is-disabled {
+    background-color: #f7f7f7;
+    color: #c3cbd6;
+    cursor: not-allowed;
+}
+
+.crm-calendar-table .crm-calendar-day-is-disabled:hover {
+    cursor: not-allowed;
+}
+
+.crm-calendar-table .crm-calendar-day-is-disabled:hover .crm-calendar-day:hover {
+    background-color: #f7f7f7;
+}
+
+.crm-calendar-table .crm-calendar-day-is-today .date-cell-solar {
+    background-color: #2c68ff;
+    text-align: center;
+    border-radius: 3px;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    color: #fff !important;
+}
+</style>

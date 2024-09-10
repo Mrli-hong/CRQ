@@ -281,102 +281,21 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-$calendar-prefix: 'crm-calendar';
-
-.#{$calendar-prefix} {
+.crm-calendar {
     background-color: transparent;
+}
 
-    .#{$calendar-prefix}-header {
-        display: flex;
-        justify-content: space-between;
-    }
+.crm-calendar .crm-calendar-header {
+    display: flex;
+    justify-content: space-between;
+}
 
-    .#{$calendar-prefix}-title {
-        color: #333;
-        align-self: center;
-    }
+.crm-calendar .crm-calendar-title {
+    color: #333;
+    align-self: center;
+}
 
-    .#{$calendar-prefix}-body {
-        padding: 5px 0;
-    }
-
-    ::v-deep .#{$calendar-prefix}-table {
-        table-layout: fixed;
-        width: 100%;
-
-        thead th {
-            padding: 4px 0;
-            color: #606266;
-            font-weight: normal;
-            border: none;
-        }
-
-        &:not(.is-range) {
-
-            td.prev,
-            td.next {
-                color: #999999;
-            }
-        }
-
-        td {
-            border-bottom: 1px solid #ebeef5;
-            border-right: 1px solid #ebeef5;
-            vertical-align: top;
-        }
-
-        tr:first-child td {
-            border-top: 1px solid #ecf5ff;
-        }
-
-        tr td:first-child {
-            border-left: 1px solid #ecf5ff;
-        }
-
-        .#{$calendar-prefix}-day {
-            box-sizing: border-box;
-            padding: 8px;
-            height: 100px;
-
-            &:hover {
-                background-color: #ecf5ff;
-            }
-        }
-
-        .date-cell {
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .date-cell-lunar {
-            color: #999999;
-        }
-
-        .#{$calendar-prefix}-day-is-selected {
-            background-color: #ecf5ff;
-        }
-
-        .#{$calendar-prefix}-day-is-disabled {
-            background-color: #f7f7f7;
-            color: #c3cbd6;
-            cursor: not-allowed;
-
-            &:hover {
-                .#{$calendar-prefix}-day:hover {
-                    background-color: #f7f7f7;
-                }
-            }
-        }
-
-        .#{$calendar-prefix}-day-is-today .date-cell-solar {
-            background-color: #2c68ff;
-            text-align: center;
-            border-radius: 3px;
-            width: 22px;
-            height: 22px;
-            line-height: 22px;
-            color: #fff !important;
-        }
-    }
+.crm-calendar .crm-calendar-body {
+    padding: 5px 0;
 }
 </style>

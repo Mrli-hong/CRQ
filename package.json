@@ -37,6 +37,7 @@
     "dayjs": "^1.11.11",
     "h_ui": "^1.65.0",
     "hddml-components": "2.9.1-beta.5",
+    "moment": "^2.30.1",
     "vite-plugin-require-transform": "^1.0.21",
     "vue": "^2.7.15"
   },

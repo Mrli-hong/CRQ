@@ -22,8 +22,10 @@
             </template>
 
             <template #date-cell="{ data }">
-                <div class="date-cell">
-                    <span class="date-cell-solar">{{ data.isToday || data.date.getDate() }}</span>
+                <div class="small-calendar-date" :class="getDateClass(data)" :style="getDateStyle(data)">
+                    <div :class="getReviewLikeClass(data)"></div>
+                    <div v-if="data.isToday"></div>
+                    {{ data.isToday || data.date.getDate() }}
                 </div>
             </template>
         </Calendar>
@@ -32,9 +34,59 @@
 </template>
 <script>
 import Calendar from './calendar.vue'
-
+import moment from 'moment'
 export default {
     name: "CrmCalendar",
+    props: {
+        // 引入引擎的dataSourceMap
+        dataSourceMap: {
+            type: Object,
+            default: () => { },
+        },
+        // 未来日期是否可选择
+        nextIsChoosed: {
+            type: Boolean,
+            default: false
+        },
+        // 切换选中日期回调
+        changeDateCallBack: {
+            type: Function,
+        },
+        // 是否包含扩展信息
+        isContainExtendInfo: {
+            type: Boolean,
+            default: false
+        },
+        extendInfoParams: {
+            type: Object,
+            default: () => { }
+        },
+        // 日期扩展查询接口
+        extendSearchInterface: {
+            type: Array,
+            default: () => []
+        },
+        // 日期状态字段
+        dateStatusField: {
+            type: String,
+            default: ''
+        },
+        // 日期状态
+        dateStatus: {
+            type: Array,
+            default: () => { }
+        },
+        // 日期角标字段
+        dateDotField: {
+            type: String,
+            default: ''
+        },
+        // 日期角标名称
+        dateDotName: {
+            type: String,
+            default: ''
+        },
+    },
     components: {
         Calendar
     },
@@ -48,175 +100,232 @@ export default {
     },
     data() {
         return {
+            clickDate: new Date(),
             dateValue: new Date(),
+            dateStateMap: {},
+            dateDotStateMap: {}
         }
     },
+    created() {
+        this.getCalendarData()
+    },
     methods: {
-        clickCalendarDay(e) { console.log(e) }
+        // 获取本月日期
+        getMonthDays(date) {
+            const temp = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+            const days = temp.getDate();
+            return this.rangeArr(days).map((_, index) => index + 1);
+        },
+
+        rangeArr(n) {
+            return Array.apply(null, { length: n }).map((_, n) => n);
+        },
+        // 获取当前日历点击时间范围
+        getCurrentMonthRange(clickDate) {
+            let days = [];
+            const date = clickDate || this.dateValue;
+            const month = date.getMonth() + 1;
+            const year = date.getFullYear();
+
+            const currentMonthDays = this.getMonthDays(date).map((day) => ({
+                year: year,
+                month: month,
+                text: day,
+            }));
+
+            days = currentMonthDays;
+
+            let currentMonthRange = {
+                currentMonthFirstDay: days[0],
+                currentMonthLastDay: days[days.length - 1],
+            };
+
+            return currentMonthRange;
+        },
+        getDateStyle(date) {
+            const d = moment(date.date).format("YYYYMMDD");
+            return {
+                color: this.dateStateMap[d]
+            }
+        },
+        // 格式化年月日
+        parseDate(y, m, d, format = "") {
+            let mm = m < 10 ? "0" + m : "" + m;
+            let dd = d < 10 ? "0" + d : "" + d;
+            let str = `${y}${format}${mm}${format}${dd}`;
+            return str;
+        },
+        // 获取日期状态
+        getCalendarData() {
+            let currentMonthRange = this.getCurrentMonthRange();
+            const firstDay = currentMonthRange.currentMonthFirstDay;
+            const lastDay = currentMonthRange.currentMonthLastDay;
+
+            let beginDate = this.parseDate(
+                firstDay.year,
+                firstDay.month,
+                firstDay.text
+            );
+            let endDate = this.parseDate(lastDay.year, lastDay.month, lastDay.text);
+
+            let formatEndDate = this.parseDate(
+                lastDay.year,
+                lastDay.month,
+                lastDay.text,
+                "-"
+            );
+
+            let endDateIsOverToday = this.isOverToday(formatEndDate);
+
+            let curDate = new Date();
+            let year = curDate.getFullYear();
+            let month = curDate.getMonth() + 1;
+            let day = curDate.getDate();
+
+            if (endDateIsOverToday) {
+                endDate = this.parseDate(year, month, day);
+            }
+            let parmas = {
+                start_date: beginDate,
+                end_date: endDate,
+            }
+            if (this.isContainExtendInfo) {
+                parmas = Object.assign(parmas, this.extendInfoParams)
+            }
+            this.dataSourceMap && this.dataSourceMap[this.extendSearchInterface].load(parmas).then(res => {
+                const rows = res.rows
+                rows.forEach(row => {
+                    const dateStatusFieldValue = row[this.dateStatusField]
+                    const color = this.dateStatus.find(item => item.value === dateStatusFieldValue)?.color || '#333'
+
+                    const dateDotFieldValue = row[this.dateDotField]
+                    this.$set(this.dateDotStateMap, rows.daily_date, dateDotFieldValue)
+                    this.$set(this.dateStateMap, rows.daily_date, color)
+                });
+
+            })
+        },
+        // 点击切换日期
+        selectDate(val, torRquest = true) {
+            // event && event.stopPropagation();
+            if (!val) return;
+            let calendarRefValue = this.$refs.calendarRef;
+            if (val === "today") {
+                calendarRefValue.selectDate(val, false);
+            } else {
+                calendarRefValue.selectDate(val, true);
+            }
+        },
+        // 日期是否大于当前日期
+        isOverToday(date) {
+            let todayDate = new Date();
+            let Now = todayDate.valueOf();
+            let time = new Date(date).valueOf();
+            if (Now < time) {
+                return true;
+            } else {
+                return false;
+            }
+        },
+
+        // 获取点赞评论小点样式
+        getReviewLikeClass(date) {
+            const d = moment(date.date).format("YYYYMMDD");
+            let classStr = "";
+            if (this.dateDotStateMap[d] === '1') {
+                classStr = classStr + "is-review-like-dot ";
+            }
+            return classStr;
+        },
+
+        // 左侧日历对应状态样式添加
+        getDateClass(date) {
+            const d = moment(date.date).format("YYYYMMDD");
+            let classStr = "";
+            if (date.isToday) {
+                classStr = "is-today ";
+            }
+            if (!this.nextIsChoosed) {
+                let curIsOverToday = this.isOverToday(date.date);
+                if (curIsOverToday) {
+                    classStr = classStr + "is-disabled-date-class ";
+                }
+            }
+            return classStr;
+        },
+
+        clickCalendarDay(day) {
+            if (!this.nextIsChoosed) {
+                let curIsOverToday = this.isOverToday(day.$d || day);
+                if (curIsOverToday) return;
+            }
+
+            this.clickDate = day.$d || day;
+            console.log(day)
+        }
     }
 }
 </script>
 
 <style lang="scss" scoped>
-.small-calendar {
-    height: calc(100% - 38px);
-    width: 100%;
-    display: flex;
-    align-items: flex-end;
-    flex-wrap: wrap;
-    align-content: space-between;
+$primary-color: #495060;
+$border-color: #f1f1f1;
+$highlight-color: #ff4a4a;
+$submit-color: #1ac52c;
+$draft-color: #77a4e2;
+$disabled-color: #c3cbd6;
+$bg-color: #f7f7f7;
+$link-color: #2c68ff;
 
-    .calendar-header {
+.small-calendar {
+    .small-calendar-date {
         display: flex;
         align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+
+        &.is-disabled-date-class {
+            background-color: #f7f7f7;
+            color: #c3cbd6;
+            cursor: not-allowed;
+        }
+    }
+
+    .calendar-header {
         width: 100%;
+        display: flex;
         border-bottom: 1px solid #f1f1f1;
         margin-bottom: 5px;
+        align-items: center;
+        justify-content: center;
 
         .today-top {
+            display: flex;
+            flex: 1;
             color: #495060;
             width: 26px;
-            margin-right: 24px;
-            cursor: pointer;
+            margin-left: 10px;
+            cursor: pointer
         }
 
         .calendar-change-date {
             display: flex;
-            justify-content: space-around;
+            flex: 4;
             align-items: center;
-            width: 248px;
-            margin-right: 50px;
+            justify-content: space-between;
+            margin-right: 20px;
 
             .date-text {
                 font-size: 12px;
                 color: #495060;
-                line-height: 32px;
+                line-height: 32px
             }
 
             i {
                 cursor: pointer;
                 color: #9ea7b4;
-            }
-        }
-    }
-
-    .submit-number-line-box {
-        width: 100%;
-        height: 36px;
-    }
-
-    .submit-number-line {
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: #f4f8ff;
-        border-radius: 4px;
-        padding: 10px 13px;
-        margin-top: 25px;
-
-        .text-line {
-            display: flex;
-            color: #999;
-
-            .submit-number {
-                margin-left: 7px;
-                color: #333;
-            }
-
-            .not-submit-number {
-                margin: 0 7px;
-                color: #ff4a4a;
-            }
-        }
-    }
-
-    .calendar-footer {
-        width: 100%;
-        margin-top: 55px;
-        font-size: 14px;
-
-        .date-state-wrap {
-            margin-bottom: 70px;
-        }
-
-        .date-statistic-wrap {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-
-            .statistic-info {
-                color: #2c68ff;
-                padding: 4px 12px;
-                border: 1px solid #2c68ff;
-                border-radius: 4px;
-
-                .statistic-info-btn {
-                    cursor: pointer;
-                }
-
-                i {
-                    font-size: 14px;
-                }
-
-                span {
-                    display: inline-block;
-                    font-size: 12px;
-                    line-height: 14px;
-                }
-            }
-        }
-
-        .date-state {
-            color: #999;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            margin-top: 7px;
-
-            .box {
-                width: 8px;
-                height: 8px;
-                border-radius: 1px;
-                margin-right: 12px;
-            }
-
-            .draft,
-            .underling {
-                background: #77a4e2;
-            }
-
-            .submit {
-                background: #1ac52c;
-            }
-
-            .not-submit {
-                background: #ff4a4a;
-            }
-
-            .like-dot {
-                width: 8px;
-                height: 8px;
-                border-radius: 50%;
-                margin: 2px 12px 0 0;
-                background: #ff991d;
-            }
-
-            .export {
-                display: flex;
-                color: #2c68ff;
-                cursor: pointer;
-
-                .export-icon {
-                    width: 16px;
-                    height: 16px;
-                    background-size: 100%;
-                    background-image: url(/hswealth-mkm/img/export.52f5c65b.png);
-                    background-position: 50%;
-                    background-repeat: no-repeat;
-                    margin: 1px 5px 0;
-                }
             }
         }
     }
@@ -228,118 +337,27 @@ export default {
             justify-content: center;
             align-items: center;
 
-            &-is-selected {
-                background-color: #fff;
-
-                .small-calendar-date {
-                    width: 24px;
-                    height: 24px;
-                    border-radius: 4px;
-                    background-color: #ff4a4a;
-                    color: #fff;
-                }
-
-                .is-today {
-                    color: #fff;
-                    background-color: #ff4a4a;
-                }
-
-                .is-submit-class {
-                    color: #fff;
-                    background-color: #1ac52c;
-                }
-
-                .is-draft-class,
-                .is-partial-submission-class {
-                    color: #fff;
-                    background-color: #77a4e2;
-                }
-
-                .is-not-submit-class {
-                    color: #fff;
-                    background-color: #ff4a4a;
-                }
-
-                .is-disabled-date-class {
-                    background-color: #f7f7f7;
-                    color: #c3cbd6;
-                }
-            }
-
             &:hover {
                 background-color: #fff;
                 cursor: pointer;
             }
-
-            &-is-disabled {
-                background-color: #fff;
-            }
         }
 
-        tr
-    }
-
-    .small-calendar-date {
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        position: relative;
-
-        &:hover {
-            cursor: pointer;
+        th {
+            padding: 5px 0;
+            background: none;
+            text-align: center;
+            color: $disabled-color;
         }
 
-        .is-today {
-            width: 24px;
-            height: 24px;
-            border-radius: 4px;
-            color: #ff4a4a;
+        td {
+            padding: 0;
+            border: none;
         }
 
-        .is-submit-class {
-            width: 24px;
-            height: 24px;
-            border-radius: 4px;
-            color: #1ac52c;
-        }
-
-        .is-draft-class,
-        .is-partial-submission-class {
-            width: 24px;
-            height: 24px;
-            border-radius: 4px;
-            color: #77a4e2;
-        }
-
-        .is-not-submit-class {
-            width: 24px;
-            height: 24px;
-            border-radius: 4px;
-            color: #ff4a4a;
-        }
-
-        .is-disabled-date-class {
-            width: 24px;
-            height: 24px;
-            border-radius: 4px;
-            background-color: #f7f7f7;
-            color: #c3cbd6;
-            cursor: not-allowed;
-
-            &:hover {
-                cursor: not-allowed;
-            }
-        }
-
-        .is-review-like-dot {
-            position: absolute;
-            right: 0;
-            top: 0;
-            width: 6px;
-            height: 6px;
-            background: #ff991d;
-            border-radius: 4px;
+        tr:first-child td,
+        tr td:first-child {
+            border: none;
         }
     }
 }
