@@ -29,12 +29,25 @@
                 </div>
             </template>
         </Calendar>
+
+        <!-- 插槽 -->
+        <slot></slot>
+
         <!-- 日历尾部 -->
+        <div v-if="footerContentList.length" class="calendar-footer">
+            <div class="calendar-footer-item" :key="index" v-for="(item, index) in  footerContentList ">
+                <div :class="{ rec: !item.isCircle, cir: item.isCircle }" :style="{ backgroundColor: item.color }">
+                </div>
+                <span class="calendar-footer-item-text"> {{ item.name }}</span>
+            </div>
+        </div>
     </div>
 </template>
 <script>
 import Calendar from './calendar.vue'
 import moment from 'moment'
+import api from '../../common/api/index'
+
 export default {
     name: "CrmCalendar",
     props: {
@@ -74,7 +87,7 @@ export default {
         // 日期状态
         dateStatus: {
             type: Array,
-            default: () => { }
+            default: () => []
         },
         // 日期角标字段
         dateDotField: {
@@ -97,13 +110,27 @@ export default {
         month() {
             return this.dateValue.getMonth() + 1;
         },
+        footerContentList() {
+            const res = []
+            this.dateStatus.forEach(item => {
+                res.push({ name: item.name, color: item.color })
+            })
+            if (this.dateDotField) {
+                res.push({ name: this.dateDotName, color: '#ff991d', isCircle: true })
+            }
+            return res
+        }
     },
     data() {
         return {
             clickDate: new Date(),
             dateValue: new Date(),
+            // 日期颜色映射
             dateStateMap: {},
-            dateDotStateMap: {}
+            // 日期角标状态映射
+            dateDotStateMap: {},
+            // 日期额外参数映射
+            dateExtendInfo: {}
         }
     },
     created() {
@@ -144,6 +171,12 @@ export default {
         },
         getDateStyle(date) {
             const d = moment(date.date).format("YYYYMMDD");
+            if (date.isSelected) {
+                return {
+                    color: '#fff',
+                    backgroundColor: this.dateStateMap[d]
+                }
+            }
             return {
                 color: this.dateStateMap[d]
             }
@@ -155,9 +188,15 @@ export default {
             let str = `${y}${format}${mm}${format}${dd}`;
             return str;
         },
+        resetData() {
+            this.dateStateMap = {}
+            this.dateDotStateMap = {}
+            this.dateExtendInfo = {}
+        },
         // 获取日期状态
-        getCalendarData() {
-            let currentMonthRange = this.getCurrentMonthRange();
+        getCalendarData(clickDate) {
+            this.resetData();
+            let currentMonthRange = this.getCurrentMonthRange(clickDate);
             const firstDay = currentMonthRange.currentMonthFirstDay;
             const lastDay = currentMonthRange.currentMonthLastDay;
 
@@ -175,35 +214,62 @@ export default {
                 "-"
             );
 
-            let endDateIsOverToday = this.isOverToday(formatEndDate);
+            if (!this.nextIsChoosed) {
+                let endDateIsOverToday = this.isOverToday(formatEndDate);
 
-            let curDate = new Date();
-            let year = curDate.getFullYear();
-            let month = curDate.getMonth() + 1;
-            let day = curDate.getDate();
+                let curDate = new Date();
+                let year = curDate.getFullYear();
+                let month = curDate.getMonth() + 1;
+                let day = curDate.getDate();
 
-            if (endDateIsOverToday) {
-                endDate = this.parseDate(year, month, day);
+                if (endDateIsOverToday) {
+                    endDate = this.parseDate(year, month, day);
+                }
             }
-            let parmas = {
+
+            let params = {
                 start_date: beginDate,
                 end_date: endDate,
-            }
-            if (this.isContainExtendInfo) {
-                parmas = Object.assign(parmas, this.extendInfoParams)
-            }
-            this.dataSourceMap && this.dataSourceMap[this.extendSearchInterface].load(parmas).then(res => {
-                const rows = res.rows
-                rows.forEach(row => {
-                    const dateStatusFieldValue = row[this.dateStatusField]
-                    const color = this.dateStatus.find(item => item.value === dateStatusFieldValue)?.color || '#333'
 
-                    const dateDotFieldValue = row[this.dateDotField]
-                    this.$set(this.dateDotStateMap, rows.daily_date, dateDotFieldValue)
-                    this.$set(this.dateStateMap, rows.daily_date, color)
-                });
+            }
 
-            })
+            params = Object.assign(params, this.extendInfoParams)
+
+            // this.dataSourceMap && this.dataSourceMap[this.extendSearchInterface].load(params).then(res => {
+            //     const rows = res.rows
+            //     rows.forEach(row => {
+            //         const dateStatusFieldValue = row[this.dateStatusField]
+            //         const color = this.dateStatus.find(item => item.value === dateStatusFieldValue)?.color || '#333'
+
+            //         const dateDotFieldValue = row[this.dateDotField]
+
+            //         this.$set(this.dateExtendInfo, rows.daily_date, row)
+            //         this.$set(this.dateDotStateMap, rows.daily_date, dateDotFieldValue)
+            //         this.$set(this.dateStateMap, rows.daily_date, color)
+            //     });
+
+            // })
+            return api.post(
+                'g/hswealth.mkm/v/getDailyReportCalenderInner',
+                params
+            )
+                .then((res) => {
+                    console.log(res)
+                    const rows = res.data.rows
+                    rows.forEach(row => {
+                        const dateStatusFieldValue = row[this.dateStatusField]
+                        const color = this.dateStatus.find(item => item.value === dateStatusFieldValue)?.color || '#333'
+
+                        const dateDotFieldValue = row[this.dateDotField]
+
+                        this.$set(this.dateExtendInfo, row.daily_date, row)
+                        this.$set(this.dateDotStateMap, row.daily_date, dateDotFieldValue)
+                        this.$set(this.dateStateMap, row.daily_date, color)
+                    });
+                })
+                .catch((e) => {
+                    this.$hMessage.error(e?.error_info || '系统异常，请联系管理员！')
+                })
         },
         // 点击切换日期
         selectDate(val, torRquest = true) {
@@ -215,6 +281,7 @@ export default {
             } else {
                 calendarRefValue.selectDate(val, true);
             }
+            this.getCalendarData()
         },
         // 日期是否大于当前日期
         isOverToday(date) {
@@ -253,15 +320,33 @@ export default {
             }
             return classStr;
         },
-
+        isSameYearMonth(date1, date2) {
+            return date1.getFullYear() === date2.getFullYear() && date1.getMonth() === date2.getMonth();
+        },
         clickCalendarDay(day) {
+
             if (!this.nextIsChoosed) {
                 let curIsOverToday = this.isOverToday(day.$d || day);
                 if (curIsOverToday) return;
             }
 
             this.clickDate = day.$d || day;
-            console.log(day)
+            const d = moment(day.$d).format("YYYYMMDD");
+
+            if (!this.isSameYearMonth(this.clickDate, this.dateValue)) {
+                this.getCalendarData(this.clickDate).then(() => {
+                    // 点击调用回调函数传递额外参数和当前值
+                    const extInfo = this.dateExtendInfo[d] || {}
+                    this.changeDateCallBack && this.changeDateCallBack(d, extInfo)
+                })
+            } else {
+
+                const extInfo = this.dateExtendInfo[d] || {}
+                this.changeDateCallBack && this.changeDateCallBack(d, extInfo)
+            }
+
+
+
         }
     }
 }
@@ -279,12 +364,23 @@ $link-color: #2c68ff;
 
 .small-calendar {
     .small-calendar-date {
+        position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
         width: 24px;
         height: 24px;
         border-radius: 4px;
+
+        .is-review-like-dot {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 6px;
+            height: 6px;
+            background: #ff991d;
+            border-radius: 4px;
+        }
 
         &.is-disabled-date-class {
             background-color: #f7f7f7;
@@ -358,6 +454,36 @@ $link-color: #2c68ff;
         tr:first-child td,
         tr td:first-child {
             border: none;
+        }
+    }
+
+    .calendar-footer {
+        padding-left: 5px;
+
+        .calendar-footer-item {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            margin-bottom: 8px;
+
+            .calendar-footer-item-text {
+                color: #999;
+                font-size: 14px;
+            }
+
+            .rec {
+                width: 8px;
+                height: 8px;
+                border-radius: 1px;
+                margin-right: 12px;
+            }
+
+            .cir {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                margin-right: 12px;
+            }
         }
     }
 }

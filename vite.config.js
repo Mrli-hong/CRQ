@@ -16,13 +16,13 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/g': {
-        target: 'http://10.20.36.200:8088', // 后台 API 地址
+        target: 'http://10.20.29.168:8088', // 后台 API 地址
         changeOrigin: true,
         configure: (proxy) => {
           proxy.on('proxyReq', function (proxyReq, req, res, options) {
             // 手动塞cookie，本地开发自己验证接口，需要更新token
             const cookieValue =
-              'token=f006305d-a4cd-4bb3-b4dc-d4e1740c62bf; user_token=70F8B104A3C2FDF6E94B7A1F47B9CA5247D08B27444753171C5114178468818774F55C17E18538D4' // 固定的 Cookie 值
+              'token=b5a6a1ec-fa0d-485c-81bf-d5129aa9d6f5;user_token=70F8B104A3C2FDF6E94B7A1F47B9CA5247D08B27444753171C5114178468818774F55C17E18538D4' // 固定的 Cookie 值
             proxyReq.setHeader('Cookie', cookieValue)
             proxyReq.removeHeader('origin')
           })
