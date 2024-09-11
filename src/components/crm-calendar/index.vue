@@ -1,8 +1,9 @@
 <template>
     <div class="small-calendar">
         <!-- 日历头部 -->
-        <Calendar ref="calendarRef" v-model="dateValue" size="small" @on-click="clickCalendarDay">
-            <template #header="{ }">
+        <Calendar ref="calendarRef" v-model="dateValue" size="small" :disabledDate="disabledDate"
+            @on-click="clickCalendarDay">
+            <template #header="{}">
                 <div class="calendar-header">
                     <div class="today-top" @click="selectDate('today')">
                         今天
@@ -35,7 +36,7 @@
 
         <!-- 日历尾部 -->
         <div v-if="footerContentList.length" class="calendar-footer">
-            <div class="calendar-footer-item" :key="index" v-for="(item, index) in  footerContentList ">
+            <div class="calendar-footer-item" :key="index" v-for="(item, index) in footerContentList ">
                 <div :class="{ rec: !item.isCircle, cir: item.isCircle }" :style="{ backgroundColor: item.color }">
                 </div>
                 <span class="calendar-footer-item-text"> {{ item.name }}</span>
@@ -51,6 +52,10 @@ import api from '../../common/api/index'
 export default {
     name: "CrmCalendar",
     props: {
+        value: {
+            type: Date,
+            default: () => new Date()
+        },
         // 引入引擎的dataSourceMap
         dataSourceMap: {
             type: Object,
@@ -70,14 +75,15 @@ export default {
             type: Boolean,
             default: false
         },
+        // 日期扩展信息查询接口额外参数
         extendInfoParams: {
             type: Object,
             default: () => { }
         },
-        // 日期扩展查询接口
+        // 日期扩展信息查询接口
         extendSearchInterface: {
-            type: Array,
-            default: () => []
+            type: String,
+            default: ''
         },
         // 日期状态字段
         dateStatusField: {
@@ -102,6 +108,14 @@ export default {
     },
     components: {
         Calendar
+    },
+    watch: {
+        value: {
+            handler(val) {
+                this.dateValue = val || new Date()
+            },
+            immediate: true
+        }
     },
     computed: {
         year() {
@@ -137,6 +151,20 @@ export default {
         this.getCalendarData()
     },
     methods: {
+        // 禁用日期
+        disabledDate(date) {
+            if (this.nextIsChoosed) {
+                return false
+            }
+            let myDate = new Date();
+            let now = myDate.valueOf();
+            let time = new Date(date).valueOf();
+            if (now < time) {
+                return true;
+            } else {
+                return false;
+            }
+        },
         // 获取本月日期
         getMonthDays(date) {
             const temp = new Date(date.getFullYear(), date.getMonth() + 1, 0);
@@ -172,10 +200,13 @@ export default {
         getDateStyle(date) {
             const d = moment(date.date).format("YYYYMMDD");
             if (date.isSelected) {
+
+                // 选中的时候有状态
                 return {
                     color: '#fff',
-                    backgroundColor: this.dateStateMap[d]
+                    backgroundColor: this.dateStateMap[d] || '#2c68ff'
                 }
+
             }
             return {
                 color: this.dateStateMap[d]
@@ -235,42 +266,45 @@ export default {
 
             params = Object.assign(params, this.extendInfoParams)
 
-            // this.dataSourceMap && this.dataSourceMap[this.extendSearchInterface].load(params).then(res => {
-            //     const rows = res.rows
-            //     rows.forEach(row => {
-            //         const dateStatusFieldValue = row[this.dateStatusField]
-            //         const color = this.dateStatus.find(item => item.value === dateStatusFieldValue)?.color || '#333'
+            return this.dataSourceMap && this.dataSourceMap[this.extendSearchInterface].load(params).then(res => {
+                const rows = res.data.rows
+                rows.forEach(row => {
+                    const dateStatusFieldValue = row[this.dateStatusField]
+                    const color = this.dateStatus.find(item => item.value === dateStatusFieldValue)?.color || '#333'
 
-            //         const dateDotFieldValue = row[this.dateDotField]
+                    const dateDotFieldValue = row[this.dateDotField]
 
-            //         this.$set(this.dateExtendInfo, rows.daily_date, row)
-            //         this.$set(this.dateDotStateMap, rows.daily_date, dateDotFieldValue)
-            //         this.$set(this.dateStateMap, rows.daily_date, color)
-            //     });
+                    this.$set(this.dateExtendInfo, row.daily_date, row)
+                    this.$set(this.dateDotStateMap, row.daily_date, dateDotFieldValue)
+                    this.$set(this.dateStateMap, row.daily_date, color)
+                });
+            }).catch((e) => {
+                this.$hMessage.error(e?.error_info || '系统异常，请联系管理员！')
+            })
 
-            // })
-            return api.post(
-                'g/hswealth.mkm/v/getDailyReportCalenderInner',
-                params
-            )
-                .then((res) => {
-                    console.log(res)
-                    const rows = res.data.rows
-                    rows.forEach(row => {
-                        const dateStatusFieldValue = row[this.dateStatusField]
-                        const color = this.dateStatus.find(item => item.value === dateStatusFieldValue)?.color || '#333'
+            // return api.post(
+            //     'g/hswealth.mkm/v/getDailyReportCalenderInner',
+            //     params
+            // )
+            //     .then((res) => {
+            //         // console.log(res)
+            //         const rows = res.data.rows
+            //         rows.forEach(row => {
+            //             const dateStatusFieldValue = row[this.dateStatusField]
+            //             const color = this.dateStatus.find(item => item.value === dateStatusFieldValue)?.color || '#333'
 
-                        const dateDotFieldValue = row[this.dateDotField]
+            //             const dateDotFieldValue = row[this.dateDotField]
 
-                        this.$set(this.dateExtendInfo, row.daily_date, row)
-                        this.$set(this.dateDotStateMap, row.daily_date, dateDotFieldValue)
-                        this.$set(this.dateStateMap, row.daily_date, color)
-                    });
-                })
-                .catch((e) => {
-                    this.$hMessage.error(e?.error_info || '系统异常，请联系管理员！')
-                })
+            //             this.$set(this.dateExtendInfo, row.daily_date, row)
+            //             this.$set(this.dateDotStateMap, row.daily_date, dateDotFieldValue)
+            //             this.$set(this.dateStateMap, row.daily_date, color)
+            //         });
+            //     })
+            //     .catch((e) => {
+            //         this.$hMessage.error(e?.error_info || '系统异常，请联系管理员！')
+            //     })
         },
+
         // 点击切换日期
         selectDate(val, torRquest = true) {
             // event && event.stopPropagation();
@@ -282,6 +316,7 @@ export default {
                 calendarRefValue.selectDate(val, true);
             }
             this.getCalendarData()
+
         },
         // 日期是否大于当前日期
         isOverToday(date) {
@@ -324,7 +359,7 @@ export default {
             return date1.getFullYear() === date2.getFullYear() && date1.getMonth() === date2.getMonth();
         },
         clickCalendarDay(day) {
-
+            // 未来日期不可点击
             if (!this.nextIsChoosed) {
                 let curIsOverToday = this.isOverToday(day.$d || day);
                 if (curIsOverToday) return;
@@ -333,16 +368,18 @@ export default {
             this.clickDate = day.$d || day;
             const d = moment(day.$d).format("YYYYMMDD");
 
+            // 是否产生翻页效果，如果翻页先获取翻页后的日期信息，点击时候日期的value没有改变先抛出点击事件之后在改变所以dateValue，clickDate不等
             if (!this.isSameYearMonth(this.clickDate, this.dateValue)) {
                 this.getCalendarData(this.clickDate).then(() => {
                     // 点击调用回调函数传递额外参数和当前值
                     const extInfo = this.dateExtendInfo[d] || {}
                     this.changeDateCallBack && this.changeDateCallBack(d, extInfo)
+                    this.$emit("input", this.clickDate);
                 })
             } else {
-
                 const extInfo = this.dateExtendInfo[d] || {}
                 this.changeDateCallBack && this.changeDateCallBack(d, extInfo)
+                this.$emit("input", this.clickDate);
             }
 
 

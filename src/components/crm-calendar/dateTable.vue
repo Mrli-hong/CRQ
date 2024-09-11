@@ -320,7 +320,6 @@ export default {
 }
 
 .crm-calendar-table .crm-calendar-day-is-disabled {
-    background-color: #f7f7f7;
     color: #c3cbd6;
     cursor: not-allowed;
 }
@@ -329,9 +328,7 @@ export default {
     cursor: not-allowed;
 }
 
-.crm-calendar-table .crm-calendar-day-is-disabled:hover .crm-calendar-day:hover {
-    background-color: #f7f7f7;
-}
+
 
 .crm-calendar-table .crm-calendar-day-is-today .date-cell-solar {
     background-color: #2c68ff;
